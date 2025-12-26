@@ -191,13 +191,13 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
       </div>
 
       {/* Header Section */}
-      {/* Gap adjusted to pb-5 for tighter layout */}
-      <div className="relative bg-gradient-to-b from-orange-900 to-slate-900 p-6 pb-5 border-b-4 border-orange-600 clip-path-slant">
+      {/* Reduced pb from 5 to 4 */}
+      <div className="relative bg-gradient-to-b from-orange-900 to-slate-900 p-6 pb-4 border-b-4 border-orange-600 clip-path-slant">
         {/* Tag Badge */}
         <div className="absolute top-0 right-0">
            <div className="bg-orange-600 text-white text-xs font-bold px-3 h-7 flex items-center justify-center rounded-bl-lg shadow-md uppercase tracking-wider leading-none">
-             {/* pb-1.5 helps counteract html2canvas text drop */}
-             <span className="pb-1.5">{data.tag}</span>
+             {/* pb-2 + block to ensure lift */}
+             <span className="block pb-2">{data.tag}</span>
            </div>
         </div>
 
@@ -226,8 +226,8 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
       </div>
 
       {/* Images Section */}
-      {/* Gap adjusted to pt-5 */}
-      <div className="flex-1 p-6 pt-5 flex flex-col gap-4 relative group/images">
+      {/* Reduced pt from 5 to 4 */}
+      <div className="flex-1 p-6 pt-4 flex flex-col gap-4 relative group/images">
         
         {/* Image Controls */}
         <div className={`absolute top-2 right-6 z-30 flex gap-2 ${localImages.length === 0 ? 'opacity-100' : 'opacity-0 group-hover/images:opacity-100'} transition-opacity`}>
@@ -300,7 +300,7 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
                     />
                     {/* Preview Tag */}
                     <div className="absolute bottom-0 left-0 bg-black/70 px-3 h-7 flex items-center justify-center text-xs text-orange-400 font-gaming uppercase leading-none">
-                        <span className="pb-1.5">插件预览</span>
+                        <span className="block pb-2">插件预览</span>
                     </div>
                 </div>
 
@@ -352,14 +352,14 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
       </div>
 
       {/* Footer / QR Section */}
-      <div className="bg-slate-950 px-6 pt-6 pb-10 border-t border-slate-800 flex items-center justify-between gap-4">
+      <div className="bg-slate-950 px-6 pt-5 pb-10 border-t border-slate-800 flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0 pr-2">
             <div className="flex items-center gap-3 mb-1">
                 <div className="text-orange-600 font-gaming font-bold text-lg uppercase">立即获取</div>
                 
-                {/* Price Tag: Fixed height flex container with bottom padding on text to lift it */}
+                {/* Price Tag: Adjusted with pb-2.5 and relative -top-0.5 to fix downward shift */}
                 <div className="bg-orange-600 text-white px-4 h-8 flex items-center justify-center skew-x-[-12deg] shadow-lg border border-orange-400">
-                    <span className="block skew-x-[12deg] font-bold text-lg font-gaming leading-none pb-2">{data.price}</span>
+                    <span className="block skew-x-[12deg] font-bold text-lg font-gaming leading-none pb-2.5 relative -top-0.5">{data.price}</span>
                 </div>
             </div>
 
