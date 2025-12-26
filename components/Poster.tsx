@@ -196,8 +196,8 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
         {/* Tag Badge */}
         <div className="absolute top-0 right-0">
            <div className="bg-orange-600 text-white text-xs font-bold px-3 h-7 flex items-center justify-center rounded-bl-lg shadow-md uppercase tracking-wider leading-none">
-             {/* pb-1 helps counteract html2canvas text drop */}
-             <span className="pb-1">{data.tag}</span>
+             {/* pb-1.5 helps counteract html2canvas text drop */}
+             <span className="pb-1.5">{data.tag}</span>
            </div>
         </div>
 
@@ -300,7 +300,7 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
                     />
                     {/* Preview Tag */}
                     <div className="absolute bottom-0 left-0 bg-black/70 px-3 h-7 flex items-center justify-center text-xs text-orange-400 font-gaming uppercase leading-none">
-                        <span className="pb-1">插件预览</span>
+                        <span className="pb-1.5">插件预览</span>
                     </div>
                 </div>
 
@@ -359,7 +359,7 @@ const Poster: React.FC<PosterProps> = ({ data, url }) => {
                 
                 {/* Price Tag: Fixed height flex container with bottom padding on text to lift it */}
                 <div className="bg-orange-600 text-white px-4 h-8 flex items-center justify-center skew-x-[-12deg] shadow-lg border border-orange-400">
-                    <span className="block skew-x-[12deg] font-bold text-lg font-gaming leading-none pb-1">{data.price}</span>
+                    <span className="block skew-x-[12deg] font-bold text-lg font-gaming leading-none pb-2">{data.price}</span>
                 </div>
             </div>
 
