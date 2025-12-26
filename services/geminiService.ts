@@ -100,8 +100,14 @@ export const analyzeUrl = async (url: string): Promise<PosterData> => {
     **3. 插件名称 (Name)**
     - 必须完全去除标题中的 \`【...】\` 标签。
     - 去除版本号。
+    
+    **4. 图片提取 (Images) - 智能去图标**
+    - **重要规则**：网页正文中出现的第一张图片通常是 **插件图标 (Icon)**、**Logo** 或 **作者头像**。
+    - **操作**：请**务必跳过**第一张看起来是图标的小图。不要把它加入 \`imageUrls\`。
+    - **目标**：只提取 **游戏内截图 (Screenshots)**、**UI 界面展示** 或 **宽屏宣传图**。
+    - 如果没有找到任何大图，才勉强使用第一张图，但优先寻找后续的截图。
 
-    **4. 摘要 (Summary)**
+    **5. 摘要 (Summary)**
     - 80字以内，直接介绍功能。
 
     如果提供的网页内容为空（即抓取失败），请在 Summary 中说明情况。
@@ -123,7 +129,7 @@ export const analyzeUrl = async (url: string): Promise<PosterData> => {
       imageUrls: {
         type: Type.ARRAY,
         items: { type: Type.STRING },
-        description: "提取的图片链接"
+        description: "图片链接列表 (务必排除插件Icon/Logo/头像，优先展示游戏截图)"
       }
     },
     required: ["name", "tag", "shortDescription", "price", "summary", "features", "imageUrls"]
@@ -143,7 +149,8 @@ export const analyzeUrl = async (url: string): Promise<PosterData> => {
       --- END CONTENT ---
       
       请生成海报 JSON 数据。
-      重要提示：务必仔细检查 HTML 中的侧边栏(Sidebar)或元数据区域(Metadata)，寻找带有 CNY/RMB/$ 的价格信息。`,
+      重要提示：务必仔细检查 HTML 中的侧边栏(Sidebar)或元数据区域(Metadata)，寻找带有 CNY/RMB/$ 的价格信息。
+      同时，请忽略网页上的第一张图标(Icon)图片，只提取游戏截图。`,
       config: {
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
