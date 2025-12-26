@@ -42,6 +42,7 @@ const App: React.FC = () => {
         scale: 2, 
         backgroundColor: '#0f172a',
         logging: false,
+        scrollY: -window.scrollY, // Fix for partial rendering
       });
 
       const dataUrl = canvas.toDataURL('image/png');
@@ -68,6 +69,7 @@ const App: React.FC = () => {
             scale: 2,
             backgroundColor: '#0f172a',
             logging: false,
+            scrollY: -window.scrollY, // Fix for partial rendering
         });
 
         canvas.toBlob(async (blob) => {
@@ -82,18 +84,21 @@ const App: React.FC = () => {
 
             try {
                 // Try writing both text and image to clipboard
-                // Note: Support varies by browser. Chrome supports it.
                 await navigator.clipboard.write([
                     new ClipboardItem({
                         'text/plain': new Blob([textContent], { type: 'text/plain' }),
                         'image/png': blob
                     })
                 ]);
-                alert("已成功复制海报和文本！");
+                alert("已复制海报和文本！\n(提示：某些应用可能只支持粘贴图片)");
             } catch (err) {
-                console.error("Clipboard write failed", err);
-                // Fallback: Try copying just the text if image fails, or just warn
-                alert("复制到剪贴板失败，请手动下载或尝试使用 Chrome 浏览器。");
+                console.error("Clipboard write failed, trying text only fallback", err);
+                try {
+                     await navigator.clipboard.writeText(textContent);
+                     alert("复制图片失败，已复制文本内容。");
+                } catch (e2) {
+                    alert("复制失败，请尝试使用 Chrome 浏览器。");
+                }
             }
             setIsCopying(false);
         }, 'image/png');
