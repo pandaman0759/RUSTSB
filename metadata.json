@@ -1,0 +1,5 @@
+{
+  "name": "Rust Poster Gen",
+  "description": "AI-powered poster generator for Rust game plugins. Converts URL content into a stylized marketing poster.",
+  "requestFramePermissions": []
+}
