@@ -36,7 +36,7 @@ export const analyzeUrl = async (url: string): Promise<PosterData> => {
   const apiKey = getEnvVar('API_KEY') || getEnvVar('VITE_API_KEY') || getEnvVar('REACT_APP_API_KEY');
 
   if (!apiKey) {
-    throw new Error("API Key 未配置。请在部署平台的设置中添加环境变量 (API_KEY)。");
+    throw new Error("API Key 缺失。如果你正在使用 Vercel，请在 Settings -> Environment Variables 中添加变量名为 'VITE_API_KEY' 的配置，并重新部署。");
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
