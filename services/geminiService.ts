@@ -17,11 +17,29 @@ const extractJson = (text: string): any => {
 };
 
 export const analyzeUrl = async (url: string): Promise<PosterData> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key 缺失，请检查环境变量配置。");
+  // Enhanced Env Var Retrieval to support various build tools (Vite, CRA, Webpack)
+  const getEnvVar = (key: string) => {
+    // 1. Try process.env (Standard/Webpack/Next.js)
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      return process.env[key];
+    }
+    // 2. Try import.meta.env (Vite)
+    // @ts-ignore - import.meta is not strictly typed in all environments
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+      // @ts-ignore
+      return import.meta.env[key];
+    }
+    return undefined;
+  };
+
+  // Prioritize API_KEY, but fallback to VITE_ and REACT_APP_ prefixes common in frontend builds
+  const apiKey = getEnvVar('API_KEY') || getEnvVar('VITE_API_KEY') || getEnvVar('REACT_APP_API_KEY');
+
+  if (!apiKey) {
+    throw new Error("API Key 未配置。请在部署平台的设置中添加环境变量 (API_KEY)。");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   const systemInstruction = `
     你是一个精通 Rust 游戏（RustSB, Lone Design, uMod 等）的中文营销专家和网页分析师。

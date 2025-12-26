@@ -21,6 +21,8 @@ const App: React.FC = () => {
     setState({ isLoading: true, error: null, data: null });
 
     try {
+      // User requested to remove the interactive key selection.
+      // The app will now rely solely on the configured environment variable.
       const data = await analyzeUrl(url);
       setState({ isLoading: false, error: null, data });
     } catch (err: any) {
