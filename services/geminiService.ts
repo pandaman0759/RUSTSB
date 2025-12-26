@@ -84,8 +84,9 @@ export const analyzeUrl = async (url: string): Promise<PosterData> => {
   };
 
   try {
+    // Switch to gemini-3-flash-preview for better quota handling and speed
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: `分析此链接：${url}。
       特别注意寻找 RustSB 的 attachments 图片链接。
       如果找到的图片看起来像图标（Icon），请不要包含它。
@@ -107,6 +108,12 @@ export const analyzeUrl = async (url: string): Promise<PosterData> => {
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
+    
+    // Better handling for Rate Limits (429)
+    if (error.status === 429 || (error.message && error.message.includes('429')) || (error.message && error.message.includes('quota'))) {
+         throw new Error("API 调用配额已耗尽。请稍后（约1分钟）再试，或者检查您的 Google Cloud 账单/配额设置。");
+    }
+
     throw new Error(error.message || "分析网站时发生错误。");
   }
 };
