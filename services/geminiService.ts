@@ -3,12 +3,10 @@ import { PosterData } from "../types";
 
 const extractJson = (text: string): any => {
   try {
-    // Attempt to find JSON within code blocks first
     const match = text.match(/```json\s*([\s\S]*?)\s*```/);
     if (match) {
       return JSON.parse(match[1]);
     }
-    // Attempt to parse the whole text if no code blocks
     return JSON.parse(text);
   } catch (e) {
     console.error("Failed to parse JSON from Gemini response", e);
@@ -16,104 +14,129 @@ const extractJson = (text: string): any => {
   }
 };
 
+// 使用 Jina.ai 将网页转换为 AI 可读的 Markdown
+const fetchUrlContent = async (url: string): Promise<string> => {
+  try {
+    // r.jina.ai 是一个免费服务，能渲染网页并转换为 Markdown
+    const response = await fetch(`https://r.jina.ai/${url}`);
+    if (!response.ok) {
+        // 如果 Jina 失败，尝试用 allorigins 代理获取原始 HTML（兜底）
+        const proxyResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        if(proxyResponse.ok) {
+            const html = await proxyResponse.text();
+            // 简单的清理，移除脚本和样式
+            return html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gm, "")
+                       .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gm, "")
+                       .substring(0, 30000); 
+        }
+        throw new Error("无法抓取网页内容");
+    }
+    const text = await response.text();
+    // 限制长度，防止超出 Token 或包含过多无关评论
+    return text.substring(0, 50000); 
+  } catch (error) {
+    console.warn("Content fetch failed:", error);
+    return ""; // 如果抓取失败，返回空字符串，让 AI 尽力而为
+  }
+};
+
 export const analyzeUrl = async (url: string): Promise<PosterData> => {
-  // Enhanced Env Var Retrieval to support various build tools (Vite, CRA, Webpack)
   const getEnvVar = (key: string) => {
-    // 1. Try process.env (Standard/Webpack/Next.js)
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key];
-    }
-    // 2. Try import.meta.env (Vite)
-    // @ts-ignore - import.meta is not strictly typed in all environments
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-      // @ts-ignore
-      return import.meta.env[key];
-    }
+    if (typeof process !== 'undefined' && process.env && process.env[key]) return process.env[key];
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) return import.meta.env[key];
     return undefined;
   };
 
-  // Prioritize API_KEY, but fallback to VITE_ and REACT_APP_ prefixes common in frontend builds
   const apiKey = getEnvVar('API_KEY') || getEnvVar('VITE_API_KEY') || getEnvVar('REACT_APP_API_KEY');
 
   if (!apiKey) {
-    throw new Error("API Key 缺失。如果你正在使用 Vercel，请在 Settings -> Environment Variables 中添加变量名为 'VITE_API_KEY' 的配置，并重新部署。");
+    throw new Error("API Key 缺失。请检查 Vercel 环境变量设置。");
   }
+
+  // 1. 先抓取网页内容
+  const pageContent = await fetchUrlContent(url);
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
 
   const systemInstruction = `
-    你是一个精通 Rust 游戏（RustSB, Lone Design, uMod 等）的中文营销专家和网页分析师。
-    你的任务是分析提供的插件/模组 URL，提取信息以生成海报。
+    你是一个专业的 Rust 游戏插件营销海报生成助手。
     
-    利用 Google Search 工具深入分析该 URL 的页面内容。
+    你的工作流程：
+    1. **阅读**：分析用户提供的网页 Markdown 内容。
+    2. **提取**：精准提取插件名称、价格、功能点。
+    3. **找图**：在内容中寻找图片链接。
+       - **重点**：对于 RustSB 网站，图片通常在 "Attachments" 或链接形式如 \`https://rustsb.com/attachments/...\` 中。
+       - 忽略 Logo、头像、表情包等小图。
     
-    请提取或推断以下详细信息（所有文本必须用中文返回）：
-    1. 标签 (Tag)：从页面标题或面包屑中提取简短的状态标签，例如“新品”、“热门”、“免费”、“付费”、“VIP”或“Rust插件”。如果找不到特定状态，默认为“Rust插件”。
-    2. 插件名称 (Name)：提取完整的插件名称。通常格式为“英文名 - 中文名”或“【英文名·中文名】”。
-    3. 简短描述 (Short Description)：一句话的吸引人的标语。
-    4. 价格 (Price)：如果免费则写“免费”，否则写具体金额（如 ¥98.00 或 $15.00）。
-    5. 简介 (Summary)：主要功能的简洁总结（最多 80 字）。
-    6. 核心功能 (Features)：列出 3-4 个关键功能点。
-    7. 图片链接 (Image URLs) [优先级最高]：
-       - **RustSB 关键规则**：如果分析的是 RustSB 网站，其高清图片 **不会** 直接显示在搜索摘要中。你必须在页面文本中寻找形如 \`attachments/1234/\` 或 \`attachments/1234.png\` 的路径，然后构造完整链接 \`https://rustsb.com/attachments/1234/\`。
-       - **LoneDesign 规则**：寻找 \`assets/...\` 或大尺寸 \`webp/jpg\`。
-       - **去重与过滤**：**绝对不要**使用网页的小图标(logo/icon)作为第一张图。如果没有找到高质量大图，该字段可以留空数组 \`[]\`，前端会显示上传框。
-       - **数量**：尽量返回 2-3 张。
+    输出规则：
+    - **Tag**: 必须简短（如：新品、热门、免费、付费）。
+    - **Price**: 若未提及价格，且页面看起来像资源页，默认为“免费”。
+    - **Summary**: 80字以内的吸睛简介。
+    - **Features**: 3-4个核心卖点。
+    - **ImageUrls**: 必须是真实的图片 URL。如果内容中完全找不到图片，返回空数组 []。
+    
+    如果提供的网页内容为空（即抓取失败），请在 Summary 中明确说明：“无法自动读取该页面内容，请手动补充信息。”并尽可能根据 URL 猜测名称。
   `;
 
   const responseSchema: Schema = {
     type: Type.OBJECT,
     properties: {
-      name: { type: Type.STRING, description: "插件完整名称" },
-      tag: { type: Type.STRING, description: "标签" },
-      shortDescription: { type: Type.STRING, description: "一句话标语" },
+      name: { type: Type.STRING, description: "插件名称" },
+      tag: { type: Type.STRING, description: "标签(如: 新品, 免费, 付费)" },
+      shortDescription: { type: Type.STRING, description: "一句话吸引人的标语" },
       price: { type: Type.STRING, description: "价格" },
-      summary: { type: Type.STRING, description: "简介" },
+      summary: { type: Type.STRING, description: "简介 (80字以内)" },
       features: { 
         type: Type.ARRAY, 
         items: { type: Type.STRING },
-        description: "功能列表"
+        description: "3-4个核心功能点"
       },
       imageUrls: {
         type: Type.ARRAY,
         items: { type: Type.STRING },
-        description: "图片链接列表（如果找不到合适的，请返回空数组）"
+        description: "提取的图片链接"
       }
     },
     required: ["name", "tag", "shortDescription", "price", "summary", "features", "imageUrls"]
   };
 
   try {
-    // Switch to gemini-2.0-flash for high free tier limits and speed
+    // 2. 使用 Gemini 3.0 Flash Preview 处理内容
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash", 
-      contents: `分析此链接：${url}。
-      特别注意寻找 RustSB 的 attachments 图片链接。
-      如果找到的图片看起来像图标（Icon），请不要包含它。
-      如果找不到高质量大图，imageUrls 返回 [] 即可。`,
+      model: "gemini-3-flash-preview", 
+      contents: `
+      目标 URL: ${url}
+      
+      以下是该网页的实际内容：
+      --- BEGIN CONTENT ---
+      ${pageContent}
+      --- END CONTENT ---
+      
+      请生成海报 JSON 数据。`,
       config: {
         systemInstruction: systemInstruction,
-        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
         responseSchema: responseSchema
       }
     });
 
     const jsonStr = response.text;
-    if (!jsonStr) {
-        throw new Error("AI 未返回任何响应。");
-    }
+    if (!jsonStr) throw new Error("AI 未返回内容");
     
     return extractJson(jsonStr) as PosterData;
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
-    // Simplified error message for quota issues
-    if (error.status === 429 || (error.message && error.message.includes('429')) || (error.message && error.message.includes('quota'))) {
-         throw new Error("免费版 API 调用太频繁了，请休息一分钟再试。");
+    if (error.status === 429 || (error.message && error.message.includes('429'))) {
+         throw new Error("免费版 API 请求太快了。请稍等 10 秒钟再试。");
+    }
+    
+    if (error.status === 404) {
+        throw new Error("模型 'gemini-3-flash-preview' 不可用 (404)。请检查您的 API Key 是否支持该模型，或者在 Google AI Studio 中启用它。");
     }
 
-    throw new Error(error.message || "分析网站时发生错误。");
+    throw new Error(error.message || "生成失败，请重试。");
   }
 };
